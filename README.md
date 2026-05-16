@@ -19,24 +19,24 @@
 ## 🚀 시작하기
 
 ### 1. 의존성 설치
-\`\`\`bash
+```bash
 pnpm install
-\`\`\`
+```
 
 
 ### 2. 환경 변수 설정
-\`\`\`bash
+```bash
 cp .env.example .env.local
-\`\`\`
+```
 
-(상세 환경 변수 값은 \`DEPLOYMENT.md\`를 참고하세요.)
+(상세 환경 변수 값은 `DEPLOYMENT.md`를 참고하세요.)
 
 ### 3. 개발 서버 실행
-\`\`\`bash
+```bash
 pnpm dev
-\`\`\`
+```
 
-브라우저에서 \`http://localhost:3000\` 으로 접속합니다.
+브라우저에서 `http://localhost:3000` 으로 접속합니다.
 
 ## 📚 관련 문서 가이드
 * 🏗️ **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)**: 데이터 모델 및 폴더 구조 가이드
