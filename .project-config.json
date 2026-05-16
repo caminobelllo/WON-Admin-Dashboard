@@ -1,0 +1,35 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [],
+  "dev_command": "pnpm run dev",
+  "env_vars": {},
+  "experiments": null,
+  "git_remote": {
+    "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663526173880/Ls9SkUWFtPoweFHwo5ZckA",
+    "access_key_id": "ASIAZV3A2ECZCDIT6W4J",
+    "secret_access_key": "raHliiwbbCMOalsGhWB+oPJ9K2OhdrpN9P5QdOBF",
+    "session_token": "IQoJb3JpZ2luX2VjEJH//////////wEaCXVzLWVhc3QtMSJIMEYCIQCxfMEhpCuYI4NE4CoT3hrc60b4rcwfSLDHyq1FgAviBAIhAP6eCJ9rTtdsZhkvr1Ro487wXGJ0+Cdm2IihrbG3k7oDKvYDCFoQBBoMNjY1Mzg2MDk4ODY2Igw4gf/qilDSMKjOYIIq0wOOqXjSBLIjQaaxuC1XTr1Xc8mcSB9o7tnNfUbg0fC6BYvuaFStCbBa4m/qH88n4/wmVB6Ta4Sn01EOoxCR6Tscm70ai0yWKCbQirDOGwcSheitjCP35XyoI0tzScAQYUR3GTGv8ag9FGBdIPbQwgJPUymrSNHhWr6gR8XXsb2WeOQf9fc8SOPP9lVBk2+EHRSzm2FE2L8TmfqQ+HHZIoiRVV/xVB4hbnDbK5o/emEw3ICU/TG6snqfBMPztM0bsXED4/8YQWj+WfxJUuSASg3EUQDLZVkWlu4kiayCwvO1PSBIH8xAu6Xg2Uag15iblkjk6rkIfSL56niTx1bpC5pLpo6KixxxAzlQ6pY1fUPlhMj76uC14YLmQZP68lfyyvMvNdAscRX/8Ijk2MazbkRnNvHK1gBIK6apiGQFFjSSbflXW4N7qN/7HaCWUa0rdwHL/Qo5bqwer0pWgVSNUWyHXmg6+/srCLaHziT8Pc6iEzzaMAg2X3T0PhMTN9H+OzXmVTnedYV3PJNX201Snh6UI4OlE1RU13bY1sIoylQcr6QIK4SZu3EYlvZrxn5/HXB9edicJf3qg6Ip/u3bIF/+vr25b2wYMLVq6PA9dAeE5Uy4MjCOkpbQBjqcAS1SGCJg8yDUuLSkPBi7OGP+rOazluaH3AbsdQV4p3/rZzzj6nqgA3hOfJAD7/odlbzDwJo25gSZvKUc/v+PwmYsGMNZ+jCdKu13fRdy7JkxxMh6PewollfiRFtLgQ+fi97pNryt8n+HSrerpbHlxxB7CaZWvyYAfjMBShwgAHIjryJLbHdvZMZnI4YuA6GogHYFei/9x7kPV+a9aQ==",
+    "expiration": "2026-05-14T20:34:22.000Z"
+  },
+  "name": "auto-invest-admin-dashboard",
+  "path": "/home/ubuntu/auto-invest-admin-dashboard",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "MtuLaUbDxfDc7CfxV9nRB4",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "Z3QDjDUFWEmhpRNKRyuBK8",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "juyeon baeck",
+    "OWNER_OPEN_ID": "g2X2vybRT5NkmHiQQCebWR",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "26e7b248-9034-4d3d-9a5d-50dc676bd7b6",
+    "VITE_APP_ID": "Ls9SkUWFtPoweFHwo5ZckA",
+    "VITE_APP_LOGO": "",
+    "VITE_APP_TITLE": "자동투자 운영 관리 대시보드",
+    "VITE_FRONTEND_FORGE_API_KEY": "gkpaTgVGv3h89CfqBuSmiq",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-static",
+  "test_command": "pnpm test"
+}
