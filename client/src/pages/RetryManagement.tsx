@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { KPICard } from '@/components/common/KPICard';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { mockExecutions } from '@/lib/mockData';
+import { adminApi, type RetrySummary } from '@/lib/adminApi';
+import type { Execution } from '@/lib/mockData';
 import { formatDate, truncateText, maskUUID } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,14 @@ import { AlertCircle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RetryManagement() {
-  const [selectedExecution, setSelectedExecution] = useState<typeof mockExecutions[0] | null>(null);
+  const [executions, setExecutions] = useState<(Execution & { failedStep: string; retryable: boolean })[]>([]);
+  const [summary, setSummary] = useState<RetrySummary>({
+    retryableCount: 0,
+    retryingCount: 0,
+    retrySucceededCount: 0,
+    retryFailedCount: 0,
+  });
+  const [selectedExecution, setSelectedExecution] = useState<(Execution & { failedStep: string; retryable: boolean }) | null>(null);
   const [retryModalOpen, setRetryModalOpen] = useState(false);
   const [retryReason, setRetryReason] = useState('');
   const [retryStep, setRetryStep] = useState('FX');
@@ -35,20 +43,31 @@ export default function RetryManagement() {
     ticker: '',
   });
 
-  const failedExecutions = mockExecutions.filter(e => e.executionStatus === 'FAILED');
-  const retryAvailableCount = failedExecutions.length;
-  const retryProcessingCount = 0;
-  const retrySuccessCount = 0;
-  const retryFailureCount = 0;
+  const loadExecutions = () => {
+    adminApi.getRetryTargets({
+      cardUserUuid: filters.userUuid || undefined,
+      sweepRequestId: filters.executionId || undefined,
+      page: 0,
+      size: 100,
+    }).then((response) => {
+      setExecutions(response.items);
+      setSummary(response.summary);
+    });
+  };
 
-  const filteredExecutions = failedExecutions.filter(execution => {
+  useEffect(() => {
+    loadExecutions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredExecutions = executions.filter(execution => {
     if (filters.userUuid && !execution.userUuid.includes(filters.userUuid)) return false;
     if (filters.executionId && !execution.executionId.includes(filters.executionId)) return false;
     if (filters.ticker && !execution.ticker.includes(filters.ticker)) return false;
     return true;
   });
 
-  const handleRetryClick = (execution: typeof mockExecutions[0]) => {
+  const handleRetryClick = (execution: Execution & { failedStep: string; retryable: boolean }) => {
     setSelectedExecution(execution);
     setRetryModalOpen(true);
   };
@@ -86,10 +105,10 @@ export default function RetryManagement() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-4">
-          <KPICard label="재처리 가능 건수" value={retryAvailableCount} />
-          <KPICard label="재처리 진행 중" value={retryProcessingCount} />
-          <KPICard label="재처리 성공" value={retrySuccessCount} />
-          <KPICard label="재처리 실패" value={retryFailureCount} />
+          <KPICard label="재처리 가능 건수" value={summary.retryableCount} />
+          <KPICard label="재처리 진행 중" value={summary.retryingCount} />
+          <KPICard label="재처리 성공" value={summary.retrySucceededCount} />
+          <KPICard label="재처리 실패" value={summary.retryFailedCount} />
         </div>
 
         {/* Search & Filter */}
@@ -120,10 +139,13 @@ export default function RetryManagement() {
             />
 
             <div className="flex gap-2">
-              <Button className="flex-1">조회</Button>
+              <Button className="flex-1" onClick={loadExecutions}>조회</Button>
               <Button 
                 variant="outline"
-                onClick={() => setFilters({userUuid: '', executionId: '', ticker: ''})}
+                onClick={() => {
+                  setFilters({userUuid: '', executionId: '', ticker: ''});
+                  setTimeout(loadExecutions, 0);
+                }}
               >
                 초기화
               </Button>
@@ -158,7 +180,7 @@ export default function RetryManagement() {
                     <td className="font-semibold">{execution.ticker}</td>
                     <td>
                       <span className="text-xs font-medium">
-                        {execution.fxStatus === 'FAILED' ? '환전' : '주문'}
+                        {execution.failedStep}
                       </span>
                     </td>
                     <td>
@@ -171,7 +193,9 @@ export default function RetryManagement() {
                       {truncateText(execution.failReason || '오류 정보 없음', 40)}
                     </td>
                     <td>
-                      <span className="text-xs font-medium text-green-700">가능</span>
+                      <span className={`text-xs font-medium ${execution.retryable ? 'text-green-700' : 'text-slate-500'}`}>
+                        {execution.retryable ? '가능' : '불가'}
+                      </span>
                     </td>
                     <td>
                       <Button 

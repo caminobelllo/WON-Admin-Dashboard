@@ -1,12 +1,15 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getEventStatusChartData } from '@/lib/chartData';
+import { getEventStatusChartData, type EventStatusData } from '@/lib/chartData';
 
-export function EventStatusChart() {
-  const data = getEventStatusChartData();
+interface EventStatusChartProps {
+  data?: EventStatusData[];
+}
+
+export function EventStatusChart({ data = getEventStatusChartData() }: EventStatusChartProps) {
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-      <h3 className="font-semibold text-slate-900 mb-4">이벤트 발행 상태</h3>
+      <h3 className="font-semibold text-slate-900 mb-4">Card Channel 이벤트 발행 상태</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />

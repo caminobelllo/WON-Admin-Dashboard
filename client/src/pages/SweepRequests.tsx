@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { KPICard } from '@/components/common/KPICard';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { mockSweepRequests } from '@/lib/mockData';
+import { adminApi, type SweepSummary } from '@/lib/adminApi';
+import type { SweepRequest } from '@/lib/mockData';
 import { formatDate, formatCurrency, truncateText, maskUUID } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,15 @@ import {
 import { Eye } from 'lucide-react';
 
 export default function SweepRequests() {
-  const [selectedRequest, setSelectedRequest] = useState<typeof mockSweepRequests[0] | null>(null);
+  const [requests, setRequests] = useState<SweepRequest[]>([]);
+  const [summary, setSummary] = useState<SweepSummary>({
+    totalCount: 0,
+    createdCount: 0,
+    processingCount: 0,
+    completedCount: 0,
+    failedCount: 0,
+  });
+  const [selectedRequest, setSelectedRequest] = useState<SweepRequest | null>(null);
   const [filters, setFilters] = useState({
     status: 'ALL',
     userUuid: '',
@@ -24,11 +33,25 @@ export default function SweepRequests() {
     ticker: '',
   });
 
-  const completedCount = mockSweepRequests.filter(r => r.requestStatus === 'COMPLETED').length;
-  const failedCount = mockSweepRequests.filter(r => r.requestStatus === 'FAILED').length;
-  const processingCount = mockSweepRequests.filter(r => r.requestStatus === 'PROCESSING').length;
+  const loadRequests = () => {
+    adminApi.getSweepRequests({
+      status: filters.status === 'ALL' ? undefined : filters.status,
+      cardUserUuid: filters.userUuid || undefined,
+      sweepRequestId: filters.sweepRequestId || undefined,
+      page: 0,
+      size: 100,
+    }).then((response) => {
+      setRequests(response.items);
+      setSummary(response.summary);
+    });
+  };
 
-  const filteredRequests = mockSweepRequests.filter(request => {
+  useEffect(() => {
+    loadRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredRequests = requests.filter(request => {
     if (filters.status !== 'ALL' && request.requestStatus !== filters.status) return false;
     if (filters.userUuid && !request.userUuid.includes(filters.userUuid)) return false;
     if (filters.sweepRequestId && !request.sweepRequestId.includes(filters.sweepRequestId)) return false;
@@ -49,10 +72,10 @@ export default function SweepRequests() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-4">
-          <KPICard label="전체 요청 건수" value={mockSweepRequests.length} />
-          <KPICard label="처리 완료 건수" value={completedCount} />
-          <KPICard label="처리 실패 건수" value={failedCount} />
-          <KPICard label="처리 중 건수" value={processingCount} />
+          <KPICard label="전체 요청 건수" value={summary.totalCount} />
+          <KPICard label="처리 완료 건수" value={summary.completedCount} />
+          <KPICard label="처리 실패 건수" value={summary.failedCount} />
+          <KPICard label="처리 중 건수" value={summary.processingCount} />
         </div>
 
         {/* Search & Filter */}
@@ -91,10 +114,13 @@ export default function SweepRequests() {
             />
 
             <div className="flex gap-2">
-              <Button className="flex-1">조회</Button>
+              <Button className="flex-1" onClick={loadRequests}>조회</Button>
               <Button 
                 variant="outline"
-                onClick={() => setFilters({status: 'ALL', userUuid: '', sweepRequestId: '', ticker: ''})}
+                onClick={() => {
+                  setFilters({status: 'ALL', userUuid: '', sweepRequestId: '', ticker: ''});
+                  setTimeout(loadRequests, 0);
+                }}
               >
                 초기화
               </Button>

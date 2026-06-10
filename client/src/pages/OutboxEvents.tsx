@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { KPICard } from '@/components/common/KPICard';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { mockOutboxEvents } from '@/lib/mockData';
+import { adminApi, type OutboxSummary } from '@/lib/adminApi';
+import type { OutboxEvent } from '@/lib/mockData';
 import { formatDate, truncateText, maskUUID, getSystemTypeLabel, getEventTypeLabel } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,15 @@ import {
 import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function OutboxEvents() {
-  const [selectedEvent, setSelectedEvent] = useState<typeof mockOutboxEvents[0] | null>(null);
+  const [events, setEvents] = useState<OutboxEvent[]>([]);
+  const [summary, setSummary] = useState<OutboxSummary>({
+    totalCount: 0,
+    publishedCount: 0,
+    failedCount: 0,
+    retryingCount: 0,
+    pendingCount: 0,
+  });
+  const [selectedEvent, setSelectedEvent] = useState<OutboxEvent | null>(null);
   const [expandedPayload, setExpandedPayload] = useState(false);
   const [filters, setFilters] = useState({
     systemType: 'ALL',
@@ -24,11 +33,25 @@ export default function OutboxEvents() {
     sweepRequestId: '',
   });
 
-  const publishedCount = mockOutboxEvents.filter(e => e.publishStatus === 'PUBLISHED').length;
-  const failedCount = mockOutboxEvents.filter(e => e.publishStatus === 'FAILED').length;
-  const retryingCount = mockOutboxEvents.filter(e => e.publishStatus === 'RETRYING').length;
+  const loadEvents = () => {
+    adminApi.getOutboxEvents({
+      systemType: filters.systemType === 'ALL' ? undefined : filters.systemType,
+      status: filters.publishStatus === 'ALL' ? undefined : filters.publishStatus,
+      sweepRequestId: filters.sweepRequestId || undefined,
+      page: 0,
+      size: 100,
+    }).then((response) => {
+      setEvents(response.items);
+      setSummary(response.summary);
+    });
+  };
 
-  const filteredEvents = mockOutboxEvents.filter(event => {
+  useEffect(() => {
+    loadEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredEvents = events.filter(event => {
     if (filters.systemType !== 'ALL' && event.systemType !== filters.systemType) return false;
     if (filters.publishStatus !== 'ALL' && event.publishStatus !== filters.publishStatus) return false;
     if (filters.sweepRequestId && !event.sweepRequestId.includes(filters.sweepRequestId)) return false;
@@ -60,10 +83,10 @@ export default function OutboxEvents() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-4">
-          <KPICard label="전체 Outbox 이벤트" value={mockOutboxEvents.length} />
-          <KPICard label="발행 완료" value={publishedCount} />
-          <KPICard label="발행 실패" value={failedCount} />
-          <KPICard label="재시도 중" value={retryingCount} />
+          <KPICard label="전체 Outbox 이벤트" value={summary.totalCount} />
+          <KPICard label="발행 완료" value={summary.publishedCount} />
+          <KPICard label="발행 실패" value={summary.failedCount} />
+          <KPICard label="재시도 중" value={summary.retryingCount} />
         </div>
 
         {/* Search & Filter */}
@@ -100,10 +123,13 @@ export default function OutboxEvents() {
             />
 
             <div className="flex gap-2">
-              <Button className="flex-1">조회</Button>
+              <Button className="flex-1" onClick={loadEvents}>조회</Button>
               <Button 
                 variant="outline"
-                onClick={() => setFilters({systemType: 'ALL', publishStatus: 'ALL', sweepRequestId: ''})}
+                onClick={() => {
+                  setFilters({systemType: 'ALL', publishStatus: 'ALL', sweepRequestId: ''});
+                  setTimeout(loadEvents, 0);
+                }}
               >
                 초기화
               </Button>

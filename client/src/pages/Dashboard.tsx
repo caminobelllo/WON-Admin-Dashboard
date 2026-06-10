@@ -1,33 +1,96 @@
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { KPICard } from '@/components/common/KPICard';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ChartFilterProvider, useChartFilter } from '@/contexts/ChartFilterContext';
 import { ExecutionStatusChart } from '@/components/charts/ExecutionStatusChart';
-import { FailureTimelineChart } from '@/components/charts/FailureTimelineChart';
 import { EventStatusChart } from '@/components/charts/EventStatusChart';
-import { 
-  mockDashboardKPIs, 
-  mockSweepRequests, 
-  mockExecutions, 
-  mockOutboxEvents, 
-  mockInboxEvents 
-} from '@/lib/mockData';
-import { formatDate, formatCurrency, truncateText } from '@/lib/formatters';
+import { adminApi, type InboxSummary, type OutboxSummary, type SweepSummary } from '@/lib/adminApi';
+import type { EventStatusData, ExecutionStatusData } from '@/lib/chartData';
+import type { InboxEvent, OutboxEvent, SweepRequest } from '@/lib/mockData';
+import { truncateText } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 
 function DashboardContent() {
   const { executionStatusFilter } = useChartFilter();
-  
-  // 필터 적용: executionStatusFilter가 있으면 해당 상태만 필터링
-  let filteredExecutions = mockExecutions;
-  if (executionStatusFilter) {
-    filteredExecutions = mockExecutions.filter(e => e.executionStatus === executionStatusFilter);
-  }
-  
-  const failedExecutions = filteredExecutions.filter(e => e.executionStatus === 'FAILED').slice(0, 5);
-  const failedOutboxEvents = mockOutboxEvents.filter(e => e.publishStatus === 'FAILED').slice(0, 5);
-  const failedInboxEvents = mockInboxEvents.filter(e => e.processStatus === 'FAILED').slice(0, 5);
+  const [kpis, setKpis] = useState({
+    monthlySweepRequestCount: 0,
+    monthlySweepCompletedCount: 0,
+    monthlySweepFailedCount: 0,
+    monthlyOutboxFailedCount: 0,
+    monthlyInboxFailedCount: 0,
+  });
+  const [failedSweepRequests, setFailedSweepRequests] = useState<SweepRequest[]>([]);
+  const [failedOutboxEvents, setFailedOutboxEvents] = useState<OutboxEvent[]>([]);
+  const [failedInboxEvents, setFailedInboxEvents] = useState<InboxEvent[]>([]);
+  const [sweepSummary, setSweepSummary] = useState<SweepSummary>({
+    totalCount: 0,
+    createdCount: 0,
+    processingCount: 0,
+    completedCount: 0,
+    failedCount: 0,
+  });
+  const [outboxSummary, setOutboxSummary] = useState<OutboxSummary>({
+    totalCount: 0,
+    publishedCount: 0,
+    failedCount: 0,
+    retryingCount: 0,
+    pendingCount: 0,
+  });
+  const [inboxSummary, setInboxSummary] = useState<InboxSummary>({
+    totalCount: 0,
+    processedCount: 0,
+    failedCount: 0,
+    processingCount: 0,
+    receivedCount: 0,
+  });
+
+  useEffect(() => {
+    adminApi.getDashboardSummary()
+      .then((summary) => {
+        setKpis(summary.kpis);
+        setSweepSummary(summary.sweepSummary);
+        setOutboxSummary(summary.outboxSummary);
+        setInboxSummary(summary.inboxSummary);
+        setFailedSweepRequests(summary.recentFailedSweepRequests);
+        setFailedOutboxEvents(summary.recentFailedOutboxEvents);
+        setFailedInboxEvents(summary.recentFailedInboxEvents);
+      })
+      .catch(() => {
+        setKpis({
+          monthlySweepRequestCount: 0,
+          monthlySweepCompletedCount: 0,
+          monthlySweepFailedCount: 0,
+          monthlyOutboxFailedCount: 0,
+          monthlyInboxFailedCount: 0,
+        });
+      });
+  }, []);
+
+  const visibleFailedSweepRequests = executionStatusFilter === 'FAILED' || !executionStatusFilter
+    ? failedSweepRequests
+    : [];
+  const executionChartData: ExecutionStatusData[] = [
+    { name: '완료', value: sweepSummary.completedCount, fill: '#10b981' },
+    { name: '처리중', value: sweepSummary.processingCount, fill: '#3b82f6' },
+    { name: '대기', value: sweepSummary.createdCount, fill: '#9ca3af' },
+    { name: '실패', value: sweepSummary.failedCount, fill: '#ef4444' },
+  ];
+  const eventChartData: EventStatusData[] = [
+    {
+      name: 'Outbox',
+      published: outboxSummary.publishedCount,
+      failed: outboxSummary.failedCount,
+      retrying: outboxSummary.retryingCount,
+    },
+    {
+      name: 'Inbox',
+      published: inboxSummary.processedCount,
+      failed: inboxSummary.failedCount,
+      retrying: inboxSummary.processingCount,
+    },
+  ];
 
   return (
     <div>
@@ -43,34 +106,31 @@ function DashboardContent() {
         {/* KPI Cards */}
         <div className="grid grid-cols-5 gap-4">
           <KPICard 
-            label="금일 투자 전환 요청" 
-            value={mockDashboardKPIs.todaySweepRequests}
+            label="이번달 투자 전환 요청" 
+            value={kpis.monthlySweepRequestCount}
           />
           <KPICard 
-            label="금일 자동투자 완료" 
-            value={mockDashboardKPIs.todayCompletedExecutions}
+            label="이번달 자동투자 완료" 
+            value={kpis.monthlySweepCompletedCount}
           />
           <KPICard 
-            label="금일 실패 건수" 
-            value={mockDashboardKPIs.todayFailures}
-            trend="up"
-            trendValue="↑ 전일 대비 +2"
+            label="이번달 실패 건수" 
+            value={kpis.monthlySweepFailedCount}
           />
           <KPICard 
             label="Outbox 발행 실패" 
-            value={mockDashboardKPIs.outboxPublishFailures}
+            value={kpis.monthlyOutboxFailedCount}
           />
           <KPICard 
             label="Inbox 처리 실패" 
-            value={mockDashboardKPIs.inboxProcessFailures}
+            value={kpis.monthlyInboxFailedCount}
           />
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-3 gap-6">
-          <ExecutionStatusChart />
-          <FailureTimelineChart />
-          <EventStatusChart />
+        <div className="grid grid-cols-2 gap-6">
+          <ExecutionStatusChart data={executionChartData} />
+          <EventStatusChart data={eventChartData} />
         </div>
 
         {/* Recent Failures Section */}
@@ -81,17 +141,17 @@ function DashboardContent() {
               최근 실패 자동투자
             </h3>
             <div className="space-y-3">
-              {failedExecutions.length > 0 ? (
-                failedExecutions.map((execution) => (
+              {visibleFailedSweepRequests.length > 0 ? (
+                visibleFailedSweepRequests.map((execution) => (
                   <div 
-                    key={execution.executionId}
+                    key={execution.sweepRequestId}
                     className="flex items-start justify-between p-3 bg-red-50 rounded-lg border border-red-100"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <StatusBadge status={execution.executionStatus} />
+                        <StatusBadge status={execution.requestStatus} />
                         <span className="text-xs text-slate-600 font-mono">
-                          {execution.executionId.substring(0, 8)}...
+                          {execution.sweepRequestId.substring(0, 8)}...
                         </span>
                       </div>
                       <p className="text-xs text-red-700 line-clamp-2">

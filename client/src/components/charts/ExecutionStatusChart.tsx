@@ -1,10 +1,13 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { getExecutionStatusChartData } from '@/lib/chartData';
+import { getExecutionStatusChartData, type ExecutionStatusData } from '@/lib/chartData';
 import { useChartFilter } from '@/contexts/ChartFilterContext';
 import { mapChartStatusToExecutionStatus } from '@/lib/statusMapping';
 
-export function ExecutionStatusChart() {
-  const data = getExecutionStatusChartData();
+interface ExecutionStatusChartProps {
+  data?: ExecutionStatusData[];
+}
+
+export function ExecutionStatusChart({ data = getExecutionStatusChartData() }: ExecutionStatusChartProps) {
   const { executionStatusFilter, setExecutionStatusFilter } = useChartFilter();
 
   const handlePieClick = (entry: typeof data[0]) => {
