@@ -34,7 +34,7 @@ export interface Execution {
 
 export interface OutboxEvent {
   outboxId: string;
-  systemType: 'CARD' | 'INVST';
+  systemType: 'CARD' | 'INVEST';
   sweepRequestId: string;
   eventType: 'SWEEP_REQUESTED' | 'AUTO_INVEST_COMPLETED' | 'AUTO_INVEST_FAILED' | 'SWEEP_INVESTMENT_COMPLETED' | 'SWEEP_INVESTMENT_FAILED';
   publishStatus: 'PENDING' | 'PUBLISHED' | 'FAILED' | 'RETRYING';
@@ -49,10 +49,10 @@ export interface OutboxEvent {
 
 export interface InboxEvent {
   inboxId: string;
-  systemType: 'CARD' | 'INVST';
+  systemType: 'CARD' | 'INVEST';
   sweepRequestId: string;
   sourceEventId: string;
-  eventType: 'SWEEP_REQUESTED' | 'AUTO_INVEST_COMPLETED' | 'AUTO_INVEST_FAILED';
+  eventType: 'SWEEP_REQUESTED' | 'AUTO_INVEST_COMPLETED' | 'AUTO_INVEST_FAILED' | 'SWEEP_INVESTMENT_COMPLETED' | 'SWEEP_INVESTMENT_FAILED';
   processStatus: 'RECEIVED' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
   failReason: string | null;
   receivedAt: string;
@@ -201,7 +201,7 @@ export const mockOutboxEvents: OutboxEvent[] = [
   },
   {
     outboxId: generateUUID(),
-    systemType: 'INVST',
+    systemType: 'INVEST',
     sweepRequestId: mockSweepRequests[1].sweepRequestId,
     eventType: 'AUTO_INVEST_FAILED',
     publishStatus: 'FAILED',
@@ -213,7 +213,7 @@ export const mockOutboxEvents: OutboxEvent[] = [
   },
   {
     outboxId: generateUUID(),
-    systemType: 'INVST',
+    systemType: 'INVEST',
     sweepRequestId: mockSweepRequests[2].sweepRequestId,
     eventType: 'AUTO_INVEST_COMPLETED',
     publishStatus: 'RETRYING',
@@ -242,7 +242,7 @@ export const mockInboxEvents: InboxEvent[] = [
   },
   {
     inboxId: generateUUID(),
-    systemType: 'INVST',
+    systemType: 'INVEST',
     sweepRequestId: mockSweepRequests[1].sweepRequestId,
     sourceEventId: generateUUID(),
     eventType: 'AUTO_INVEST_FAILED',
@@ -255,7 +255,7 @@ export const mockInboxEvents: InboxEvent[] = [
   },
   {
     inboxId: generateUUID(),
-    systemType: 'INVST',
+    systemType: 'INVEST',
     sweepRequestId: mockSweepRequests[2].sweepRequestId,
     sourceEventId: generateUUID(),
     eventType: 'AUTO_INVEST_COMPLETED',

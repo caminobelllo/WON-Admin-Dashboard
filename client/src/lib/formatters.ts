@@ -108,7 +108,7 @@ export const getStatusLabel = (status: string): string => {
 export const getSystemTypeLabel = (systemType: string): string => {
   const labelMap: Record<string, string> = {
     'CARD': '카드망',
-    'INVST': '증권망',
+    'INVEST': '증권망',
   };
   
   return labelMap[systemType] || systemType;
@@ -119,6 +119,8 @@ export const getEventTypeLabel = (eventType: string): string => {
     'SWEEP_REQUESTED': '투자전환요청',
     'AUTO_INVEST_COMPLETED': '자동투자완료',
     'AUTO_INVEST_FAILED': '자동투자실패',
+    'SWEEP_INVESTMENT_COMPLETED': '자동투자완료',
+    'SWEEP_INVESTMENT_FAILED': '자동투자실패',
   };
   
   return labelMap[eventType] || eventType;

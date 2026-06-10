@@ -107,6 +107,10 @@ const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
 });
 
+const investClient = axios.create({
+  baseURL: import.meta.env.VITE_INVEST_API_BASE_URL || 'http://localhost:8082',
+});
+
 const unwrap = async <T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> => {
   const response = await promise;
   return response.data.data;
@@ -169,6 +173,50 @@ const mapRetryTarget = (item: RawRetryTarget): Execution & { failedStep: string;
   retryable: item.retryable,
 });
 
+const getCardOutboxEvents = async (params: Record<string, string | number | undefined>) => {
+  const data = await unwrap<PageResponse<RawOutboxEvent, OutboxSummary>>(
+    client.get('/api/admin/outbox-events', { params })
+  );
+
+  return {
+    ...data,
+    items: data.items.map(mapOutboxEvent),
+  };
+};
+
+const getInvestOutboxEvents = async (params: Record<string, string | number | undefined>) => {
+  const data = await unwrap<PageResponse<RawOutboxEvent, OutboxSummary>>(
+    investClient.get('/api/admin/invest/outbox-events', { params })
+  );
+
+  return {
+    ...data,
+    items: data.items.map(mapOutboxEvent),
+  };
+};
+
+const getCardInboxEvents = async (params: Record<string, string | number | undefined>) => {
+  const data = await unwrap<PageResponse<RawInboxEvent, InboxSummary>>(
+    client.get('/api/admin/inbox-events', { params })
+  );
+
+  return {
+    ...data,
+    items: data.items.map(mapInboxEvent),
+  };
+};
+
+const getInvestInboxEvents = async (params: Record<string, string | number | undefined>) => {
+  const data = await unwrap<PageResponse<RawInboxEvent, InboxSummary>>(
+    investClient.get('/api/admin/invest/inbox-events', { params })
+  );
+
+  return {
+    ...data,
+    items: data.items.map(mapInboxEvent),
+  };
+};
+
 export const adminApi = {
   async getDashboardSummary(baseMonth?: string) {
     const data = await unwrap<DashboardSummary>(
@@ -195,33 +243,32 @@ export const adminApi = {
   },
 
   async getOutboxEvents(params: Record<string, string | number | undefined>) {
-    const data = await unwrap<PageResponse<RawOutboxEvent, OutboxSummary>>(
-      client.get('/api/admin/outbox-events', { params })
-    );
+    if (params.systemType === 'INVEST') {
+      return getInvestOutboxEvents(params);
+    }
 
-    return {
-      ...data,
-      items: data.items.map(mapOutboxEvent),
-    };
+    return getCardOutboxEvents(params);
   },
 
-  async retryOutboxEvent(outboxId: string) {
+  async retryOutboxEvent(outboxId: string, systemType: OutboxEvent['systemType'] = 'CARD') {
+    const targetClient = systemType === 'INVEST' ? investClient : client;
+    const path = systemType === 'INVEST'
+      ? `/api/admin/invest/outbox-events/${outboxId}/retry`
+      : `/api/admin/outbox-events/${outboxId}/retry`;
+
     const data = await unwrap<RawOutboxEvent>(
-      client.post(`/api/admin/outbox-events/${outboxId}/retry`)
+      targetClient.post(path)
     );
 
     return mapOutboxEvent(data);
   },
 
   async getInboxEvents(params: Record<string, string | number | undefined>) {
-    const data = await unwrap<PageResponse<RawInboxEvent, InboxSummary>>(
-      client.get('/api/admin/inbox-events', { params })
-    );
+    if (params.systemType === 'INVEST') {
+      return getInvestInboxEvents(params);
+    }
 
-    return {
-      ...data,
-      items: data.items.map(mapInboxEvent),
-    };
+    return getCardInboxEvents(params);
   },
 
   async getRetryTargets(params: Record<string, string | number | undefined>) {
