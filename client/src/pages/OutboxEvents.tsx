@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, ChevronDown, ChevronUp, RotateCcw, Loader2 } from 'lucide-react';
 
 export default function OutboxEvents() {
   const [events, setEvents] = useState<OutboxEvent[]>([]);
@@ -27,6 +27,8 @@ export default function OutboxEvents() {
   });
   const [selectedEvent, setSelectedEvent] = useState<OutboxEvent | null>(null);
   const [expandedPayload, setExpandedPayload] = useState(false);
+  const [retryingOutboxId, setRetryingOutboxId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [filters, setFilters] = useState({
     systemType: 'ALL',
     publishStatus: 'ALL',
@@ -57,6 +59,36 @@ export default function OutboxEvents() {
     if (filters.sweepRequestId && !event.sweepRequestId.includes(filters.sweepRequestId)) return false;
     return true;
   });
+
+  const updateEvent = (updatedEvent: OutboxEvent) => {
+    setEvents((prev) => prev.map((event) => (
+      event.outboxId === updatedEvent.outboxId ? updatedEvent : event
+    )));
+    setSelectedEvent((prev) => (
+      prev?.outboxId === updatedEvent.outboxId ? updatedEvent : prev
+    ));
+  };
+
+  const handleRetry = async (event: OutboxEvent) => {
+    if (!event.retryable || retryingOutboxId) {
+      return;
+    }
+
+    setRetryingOutboxId(event.outboxId);
+    setNotice(null);
+
+    try {
+      const updatedEvent = await adminApi.retryOutboxEvent(event.outboxId);
+      updateEvent(updatedEvent);
+      setNotice({ type: 'success', message: 'Outbox 이벤트 재처리 요청이 완료되었습니다.' });
+      loadEvents();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Outbox 이벤트 재처리 요청에 실패했습니다.';
+      setNotice({ type: 'error', message });
+    } finally {
+      setRetryingOutboxId(null);
+    }
+  };
 
   const mockPayload = {
     sweepRequestId: selectedEvent?.sweepRequestId,
@@ -137,6 +169,16 @@ export default function OutboxEvents() {
           </div>
         </div>
 
+        {notice && (
+          <div className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-red-200 bg-red-50 text-red-800'
+          }`}>
+            {notice.message}
+          </div>
+        )}
+
         {/* Data Table */}
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -150,6 +192,7 @@ export default function OutboxEvents() {
                   <th>발행 상태</th>
                   <th>재시도 횟수</th>
                   <th>마지막 오류</th>
+                  <th>재처리</th>
                   <th>발행 시각</th>
                   <th>생성 시각</th>
                   <th>액션</th>
@@ -170,6 +213,21 @@ export default function OutboxEvents() {
                     <td className="text-center font-mono">{event.retryCount}</td>
                     <td className="text-xs max-w-xs">
                       {truncateText(event.lastErrorMessage || '-', 40)}
+                    </td>
+                    <td>
+                      <Button
+                        variant={event.retryable ? 'outline' : 'ghost'}
+                        size="sm"
+                        disabled={!event.retryable || retryingOutboxId === event.outboxId}
+                        title={event.retryable ? 'Outbox 이벤트 재처리' : event.retryDisabledReason || '재처리할 수 없습니다.'}
+                        onClick={() => handleRetry(event)}
+                      >
+                        {retryingOutboxId === event.outboxId ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-4 h-4" />
+                        )}
+                      </Button>
                     </td>
                     <td className="text-xs">{formatDate(event.publishedAt)}</td>
                     <td className="text-xs">{formatDate(event.createdAt)}</td>
@@ -229,6 +287,31 @@ export default function OutboxEvents() {
               <div>
                 <label className="text-xs font-semibold text-slate-600 uppercase">재시도 횟수</label>
                 <p className="mt-1 font-mono">{selectedEvent.retryCount}</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase">재처리 가능 여부</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className={`status-badge ${selectedEvent.retryable ? 'status-success' : 'status-pending'}`}>
+                    {selectedEvent.retryable ? '가능' : '불가'}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!selectedEvent.retryable || retryingOutboxId === selectedEvent.outboxId}
+                    onClick={() => handleRetry(selectedEvent)}
+                  >
+                    {retryingOutboxId === selectedEvent.outboxId ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-4 h-4" />
+                    )}
+                    재처리
+                  </Button>
+                </div>
+                {!selectedEvent.retryable && selectedEvent.retryDisabledReason && (
+                  <p className="mt-2 text-xs text-slate-500">{selectedEvent.retryDisabledReason}</p>
+                )}
               </div>
 
               <div>

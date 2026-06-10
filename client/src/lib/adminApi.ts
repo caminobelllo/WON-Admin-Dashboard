@@ -75,6 +75,8 @@ type RawSweepRequest = Omit<SweepRequest, 'sweepRequestId' | 'userUuid' | 'etfId
 type RawOutboxEvent = Omit<OutboxEvent, 'outboxId' | 'sweepRequestId'> & {
   outboxId: number | string;
   sweepRequestId: number | string;
+  retryable?: boolean;
+  retryDisabledReason?: string | null;
 };
 
 type RawInboxEvent = Omit<InboxEvent, 'inboxId' | 'sweepRequestId' | 'failReason'> & {
@@ -138,6 +140,8 @@ const mapOutboxEvent = (item: RawOutboxEvent): OutboxEvent => ({
   ...item,
   outboxId: toStringId(item.outboxId),
   sweepRequestId: toStringId(item.sweepRequestId),
+  retryable: item.retryable ?? false,
+  retryDisabledReason: item.retryDisabledReason ?? null,
 });
 
 const mapInboxEvent = (item: RawInboxEvent): InboxEvent => ({
@@ -199,6 +203,14 @@ export const adminApi = {
       ...data,
       items: data.items.map(mapOutboxEvent),
     };
+  },
+
+  async retryOutboxEvent(outboxId: string) {
+    const data = await unwrap<RawOutboxEvent>(
+      client.post(`/api/admin/outbox-events/${outboxId}/retry`)
+    );
+
+    return mapOutboxEvent(data);
   },
 
   async getInboxEvents(params: Record<string, string | number | undefined>) {

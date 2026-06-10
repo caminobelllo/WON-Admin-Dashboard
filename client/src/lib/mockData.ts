@@ -36,10 +36,12 @@ export interface OutboxEvent {
   outboxId: string;
   systemType: 'CARD' | 'INVST';
   sweepRequestId: string;
-  eventType: 'SWEEP_REQUESTED' | 'AUTO_INVEST_COMPLETED' | 'AUTO_INVEST_FAILED';
+  eventType: 'SWEEP_REQUESTED' | 'AUTO_INVEST_COMPLETED' | 'AUTO_INVEST_FAILED' | 'SWEEP_INVESTMENT_COMPLETED' | 'SWEEP_INVESTMENT_FAILED';
   publishStatus: 'PENDING' | 'PUBLISHED' | 'FAILED' | 'RETRYING';
   retryCount: number;
   lastErrorMessage: string | null;
+  retryable?: boolean;
+  retryDisabledReason?: string | null;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
