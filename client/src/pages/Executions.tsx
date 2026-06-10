@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { KPICard } from '@/components/common/KPICard';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { mockExecutions } from '@/lib/mockData';
-import { formatDate, truncateText, maskUUID } from '@/lib/formatters';
+import { adminApi, type ExecutionSummary } from '@/lib/adminApi';
+import type { Execution } from '@/lib/mockData';
+import { formatDate, maskUUID } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -16,7 +17,14 @@ import {
 import { Eye, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 
 export default function Executions() {
-  const [selectedExecution, setSelectedExecution] = useState<typeof mockExecutions[0] | null>(null);
+  const [executions, setExecutions] = useState<Execution[]>([]);
+  const [summary, setSummary] = useState<ExecutionSummary>({
+    totalCount: 0,
+    exchangeCompletedCount: 0,
+    orderFailedCount: 0,
+    completedCount: 0,
+  });
+  const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null);
   const [filters, setFilters] = useState({
     status: 'ALL',
     userUuid: '',
@@ -24,21 +32,26 @@ export default function Executions() {
     ticker: '',
   });
 
-  const completedCount = mockExecutions.filter(e => e.executionStatus === 'COMPLETED').length;
-  const failedCount = mockExecutions.filter(e => e.executionStatus === 'FAILED').length;
-  const processingCount = mockExecutions.filter(e => 
-    ['FX_REQUESTED', 'FX_COMPLETED', 'ORDER_REQUESTED'].includes(e.executionStatus)
-  ).length;
+  const loadExecutions = (nextFilters = filters) => {
+    adminApi.getAutoInvestExecutions({
+      status: nextFilters.status === 'ALL' ? undefined : nextFilters.status,
+      userUuid: nextFilters.userUuid || undefined,
+      executionId: nextFilters.executionId || undefined,
+      ticker: nextFilters.ticker || undefined,
+      page: 0,
+      size: 100,
+    }).then((response) => {
+      setExecutions(response.items);
+      setSummary(response.summary);
+    });
+  };
 
-  const filteredExecutions = mockExecutions.filter(execution => {
-    if (filters.status !== 'ALL' && execution.executionStatus !== filters.status) return false;
-    if (filters.userUuid && !execution.userUuid.includes(filters.userUuid)) return false;
-    if (filters.executionId && !execution.executionId.includes(filters.executionId)) return false;
-    if (filters.ticker && !execution.ticker.includes(filters.ticker)) return false;
-    return true;
-  });
+  useEffect(() => {
+    loadExecutions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.status]);
 
-  const getStepperStatus = (execution: typeof mockExecutions[0]) => {
+  const getStepperStatus = (execution: Execution) => {
     const steps = [
       { name: '요청 수신', status: 'completed' },
       { 
@@ -80,10 +93,10 @@ export default function Executions() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-4">
-          <KPICard label="전체 실행 건수" value={mockExecutions.length} />
-          <KPICard label="환전 완료 건수" value={completedCount} />
-          <KPICard label="주문 실패 건수" value={failedCount} />
-          <KPICard label="최종 완료 건수" value={completedCount} />
+          <KPICard label="전체 실행 건수" value={summary.totalCount} />
+          <KPICard label="환전 완료 건수" value={summary.exchangeCompletedCount} />
+          <KPICard label="주문 실패 건수" value={summary.orderFailedCount} />
+          <KPICard label="최종 완료 건수" value={summary.completedCount} />
         </div>
 
         {/* Search & Filter */}
@@ -123,10 +136,14 @@ export default function Executions() {
             />
 
             <div className="flex gap-2">
-              <Button className="flex-1">조회</Button>
+              <Button className="flex-1" onClick={() => loadExecutions()}>조회</Button>
               <Button 
                 variant="outline"
-                onClick={() => setFilters({status: 'ALL', userUuid: '', executionId: '', ticker: ''})}
+                onClick={() => {
+                  const nextFilters = {status: 'ALL', userUuid: '', executionId: '', ticker: ''};
+                  setFilters(nextFilters);
+                  loadExecutions(nextFilters);
+                }}
               >
                 초기화
               </Button>
@@ -153,7 +170,7 @@ export default function Executions() {
                 </tr>
               </thead>
               <tbody>
-                {filteredExecutions.map((execution) => (
+                {executions.map((execution) => (
                   <tr key={execution.executionId}>
                     <td className="id-monospace">{maskUUID(execution.executionId)}</td>
                     <td className="id-monospace">{maskUUID(execution.sweepRequestId)}</td>

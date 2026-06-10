@@ -47,6 +47,13 @@ export type RetrySummary = {
   retryFailedCount: number;
 };
 
+export type ExecutionSummary = {
+  totalCount: number;
+  exchangeCompletedCount: number;
+  orderFailedCount: number;
+  completedCount: number;
+};
+
 type DashboardSummary = {
   baseMonth: string;
   kpis: {
@@ -103,12 +110,23 @@ type RawRetryTarget = {
   updatedAt: string;
 };
 
+type RawExecution = Omit<Execution, 'executionId' | 'sweepRequestId' | 'userUuid' | 'etfId'> & {
+  executionId: number | string;
+  sweepRequestId: number | string;
+  userUuid?: string | null;
+  etfId?: number | string | null;
+};
+
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
 });
 
 const investClient = axios.create({
-  baseURL: import.meta.env.VITE_INVEST_API_BASE_URL || 'http://localhost:8082',
+  baseURL: import.meta.env.VITE_INVEST_API_BASE_URL || 'http://localhost:8083',
+});
+
+const investCoreClient = axios.create({
+  baseURL: import.meta.env.VITE_INVEST_CORE_API_BASE_URL || 'http://localhost:8084',
 });
 
 const unwrap = async <T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> => {
@@ -171,6 +189,16 @@ const mapRetryTarget = (item: RawRetryTarget): Execution & { failedStep: string;
   updatedAt: item.updatedAt,
   failedStep: item.failedStep,
   retryable: item.retryable,
+});
+
+const mapExecution = (item: RawExecution): Execution => ({
+  ...item,
+  executionId: toStringId(item.executionId),
+  sweepRequestId: toStringId(item.sweepRequestId),
+  userUuid: item.userUuid || '-',
+  invstAccountUuid: '-',
+  etfId: toStringId(item.etfId),
+  ticker: item.ticker || '-',
 });
 
 const getCardOutboxEvents = async (params: Record<string, string | number | undefined>) => {
@@ -279,6 +307,17 @@ export const adminApi = {
     return {
       ...data,
       items: data.items.map(mapRetryTarget),
+    };
+  },
+
+  async getAutoInvestExecutions(params: Record<string, string | number | undefined>) {
+    const data = await unwrap<PageResponse<RawExecution, ExecutionSummary>>(
+      investCoreClient.get('/api/admin/invest/auto-invest/executions', { params })
+    );
+
+    return {
+      ...data,
+      items: data.items.map(mapExecution),
     };
   },
 };
