@@ -30,16 +30,16 @@ export default function OutboxEvents() {
   const [retryingOutboxId, setRetryingOutboxId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [filters, setFilters] = useState({
-    systemType: 'ALL',
+    systemType: 'CARD',
     publishStatus: 'ALL',
     sweepRequestId: '',
   });
 
-  const loadEvents = () => {
+  const loadEvents = (nextFilters = filters) => {
     adminApi.getOutboxEvents({
-      systemType: filters.systemType === 'ALL' ? undefined : filters.systemType,
-      status: filters.publishStatus === 'ALL' ? undefined : filters.publishStatus,
-      sweepRequestId: filters.sweepRequestId || undefined,
+      systemType: nextFilters.systemType,
+      status: nextFilters.publishStatus === 'ALL' ? undefined : nextFilters.publishStatus,
+      sweepRequestId: nextFilters.sweepRequestId || undefined,
       page: 0,
       size: 100,
     }).then((response) => {
@@ -51,10 +51,10 @@ export default function OutboxEvents() {
   useEffect(() => {
     loadEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters.systemType, filters.publishStatus]);
 
   const filteredEvents = events.filter(event => {
-    if (filters.systemType !== 'ALL' && event.systemType !== filters.systemType) return false;
+    if (event.systemType !== filters.systemType) return false;
     if (filters.publishStatus !== 'ALL' && event.publishStatus !== filters.publishStatus) return false;
     if (filters.sweepRequestId && !event.sweepRequestId.includes(filters.sweepRequestId)) return false;
     return true;
@@ -78,7 +78,7 @@ export default function OutboxEvents() {
     setNotice(null);
 
     try {
-      const updatedEvent = await adminApi.retryOutboxEvent(event.outboxId);
+      const updatedEvent = await adminApi.retryOutboxEvent(event.outboxId, event.systemType);
       updateEvent(updatedEvent);
       setNotice({ type: 'success', message: 'Outbox 이벤트 재처리 요청이 완료되었습니다.' });
       loadEvents();
@@ -129,9 +129,8 @@ export default function OutboxEvents() {
                 <SelectValue placeholder="시스템 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">전체</SelectItem>
                 <SelectItem value="CARD">카드망</SelectItem>
-                <SelectItem value="INVST">증권망</SelectItem>
+                <SelectItem value="INVEST">증권망</SelectItem>
               </SelectContent>
             </Select>
 
@@ -155,12 +154,13 @@ export default function OutboxEvents() {
             />
 
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={loadEvents}>조회</Button>
+              <Button className="flex-1" onClick={() => loadEvents()}>조회</Button>
               <Button 
                 variant="outline"
                 onClick={() => {
-                  setFilters({systemType: 'ALL', publishStatus: 'ALL', sweepRequestId: ''});
-                  setTimeout(loadEvents, 0);
+                  const nextFilters = {systemType: 'CARD', publishStatus: 'ALL', sweepRequestId: ''};
+                  setFilters(nextFilters);
+                  loadEvents(nextFilters);
                 }}
               >
                 초기화

@@ -28,16 +28,16 @@ export default function InboxEvents() {
   const [selectedEvent, setSelectedEvent] = useState<InboxEvent | null>(null);
   const [expandedPayload, setExpandedPayload] = useState(false);
   const [filters, setFilters] = useState({
-    systemType: 'ALL',
+    systemType: 'CARD',
     processStatus: 'ALL',
     sweepRequestId: '',
   });
 
-  const loadEvents = () => {
+  const loadEvents = (nextFilters = filters) => {
     adminApi.getInboxEvents({
-      systemType: filters.systemType === 'ALL' ? undefined : filters.systemType,
-      status: filters.processStatus === 'ALL' ? undefined : filters.processStatus,
-      sweepRequestId: filters.sweepRequestId || undefined,
+      systemType: nextFilters.systemType,
+      status: nextFilters.processStatus === 'ALL' ? undefined : nextFilters.processStatus,
+      sweepRequestId: nextFilters.sweepRequestId || undefined,
       page: 0,
       size: 100,
     }).then((response) => {
@@ -49,10 +49,10 @@ export default function InboxEvents() {
   useEffect(() => {
     loadEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters.systemType, filters.processStatus]);
 
   const filteredEvents = events.filter(event => {
-    if (filters.systemType !== 'ALL' && event.systemType !== filters.systemType) return false;
+    if (event.systemType !== filters.systemType) return false;
     if (filters.processStatus !== 'ALL' && event.processStatus !== filters.processStatus) return false;
     if (filters.sweepRequestId && !event.sweepRequestId.includes(filters.sweepRequestId)) return false;
     return true;
@@ -98,9 +98,8 @@ export default function InboxEvents() {
                 <SelectValue placeholder="시스템 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">전체</SelectItem>
                 <SelectItem value="CARD">카드망</SelectItem>
-                <SelectItem value="INVST">증권망</SelectItem>
+                <SelectItem value="INVEST">증권망</SelectItem>
               </SelectContent>
             </Select>
 
@@ -124,12 +123,13 @@ export default function InboxEvents() {
             />
 
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={loadEvents}>조회</Button>
+              <Button className="flex-1" onClick={() => loadEvents()}>조회</Button>
               <Button 
                 variant="outline"
                 onClick={() => {
-                  setFilters({systemType: 'ALL', processStatus: 'ALL', sweepRequestId: ''});
-                  setTimeout(loadEvents, 0);
+                  const nextFilters = {systemType: 'CARD', processStatus: 'ALL', sweepRequestId: ''};
+                  setFilters(nextFilters);
+                  loadEvents(nextFilters);
                 }}
               >
                 초기화
